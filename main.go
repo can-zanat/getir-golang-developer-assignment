@@ -2,12 +2,13 @@ package main
 
 import (
 	"fmt"
-	logger "github.com/can-zanat/gologger"
-	_ "github.com/go-sql-driver/mysql"
 	"main/config"
 	"main/internal"
 	"main/store"
 	"os"
+
+	logger "github.com/can-zanat/gologger"
+	_ "github.com/go-sql-driver/mysql"
 )
 
 const serverPort = ":80"

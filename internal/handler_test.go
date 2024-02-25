@@ -3,16 +3,19 @@ package internal
 import (
 	"bytes"
 	"encoding/json"
-	"github.com/golang/mock/gomock"
-	"github.com/stretchr/testify/assert"
 	"main/model"
 	"net/http"
 	"net/http/httptest"
 	"testing"
 	"time"
+
+	"github.com/golang/mock/gomock"
+	"github.com/stretchr/testify/assert"
 )
 
 var (
+	getInfoURL = "/info"
+
 	mockSuccessResponse = model.GetInfoResponse{
 		Code: 0,
 		Msg:  "Success",
@@ -58,7 +61,6 @@ func TestHandler_GetInfo(t *testing.T) {
 	defer server.Close()
 
 	t.Run("should return info properly", func(t *testing.T) {
-
 		mockService.EXPECT().GetInfo(gomock.Any()).Return(model.GetInfoResponse{
 			Code:    0,
 			Msg:     "Success",
@@ -68,7 +70,7 @@ func TestHandler_GetInfo(t *testing.T) {
 		expectedRequestJSON, _ := json.Marshal(expectedRequest)
 		reqBody := bytes.NewBuffer(expectedRequestJSON)
 
-		req, err := http.NewRequest(http.MethodPost, server.URL+"/info", reqBody)
+		req, err := http.NewRequest(http.MethodPost, server.URL+getInfoURL, reqBody)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -87,11 +89,10 @@ func TestHandler_GetInfo(t *testing.T) {
 		assert.Equal(t, mockSuccessResponse, response)
 	})
 	t.Run("should return method not allowed error when request type is not Get", func(t *testing.T) {
-
 		expectedRequestJSON, _ := json.Marshal(expectedRequest)
 		reqBody := bytes.NewBuffer(expectedRequestJSON)
 
-		req, err := http.NewRequest(http.MethodGet, server.URL+"/info", reqBody)
+		req, err := http.NewRequest(http.MethodGet, server.URL+getInfoURL, reqBody)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -110,7 +111,6 @@ func TestHandler_GetInfo(t *testing.T) {
 		assert.Equal(t, mockStatusMethodNotAllowedResponse, response)
 	})
 	t.Run("should return status bad request error when time format is invalid", func(t *testing.T) {
-
 		expectedRequestJSON, _ := json.Marshal(model.GetInfoRequest{
 			StartDate: "invalidStartDate",
 			EndDate:   "2018-02-02",
@@ -119,7 +119,7 @@ func TestHandler_GetInfo(t *testing.T) {
 		})
 		reqBody := bytes.NewBuffer(expectedRequestJSON)
 
-		req, err := http.NewRequest(http.MethodPost, server.URL+"/info", reqBody)
+		req, err := http.NewRequest(http.MethodPost, server.URL+getInfoURL, reqBody)
 		if err != nil {
 			t.Fatal(err)
 		}

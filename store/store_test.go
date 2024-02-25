@@ -2,13 +2,14 @@ package store
 
 import (
 	"context"
-	"github.com/stretchr/testify/assert"
-	"github.com/testcontainers/testcontainers-go"
-	"github.com/testcontainers/testcontainers-go/modules/mongodb"
 	"main/config"
 	"main/model"
 	"testing"
 	"time"
+
+	"github.com/stretchr/testify/assert"
+	"github.com/testcontainers/testcontainers-go"
+	"github.com/testcontainers/testcontainers-go/modules/mongodb"
 )
 
 const (
@@ -35,6 +36,7 @@ func prepareTestStore() (store *Mongo, clean func()) {
 	}
 
 	s := NewStore(config.Mongo{URI: uri})
+
 	if err != nil {
 		panic(err)
 	}
@@ -61,7 +63,7 @@ func TestStore_GetInfo(t *testing.T) {
 		EndDate        time.Time
 		MinCount       int
 		MaxCount       int
-		ExpectedResult model.DbResponse
+		ExpectedResult model.DBResponse
 		ExpectedError  error
 	}{
 		//{
@@ -70,7 +72,7 @@ func TestStore_GetInfo(t *testing.T) {
 		//	EndDate:   time.Date(2019, 2, 2, 0, 0, 0, 0, time.UTC),
 		//	MinCount:  2700,
 		//	MaxCount:  3000,
-		//	ExpectedResult: model.DbResponse{
+		//	ExpectedResult: model.DBResponse{
 		//		Records: []model.Record{
 		//			{
 		//				Key:        sampleRecord.Key,
@@ -79,14 +81,14 @@ func TestStore_GetInfo(t *testing.T) {
 		//			},
 		//		},
 		//	},
-		//},
+		// },
 		{
 			Name:      "should return nil when record not found",
 			StartDate: time.Date(2015, 1, 26, 0, 0, 0, 0, time.UTC),
 			EndDate:   time.Date(2019, 2, 2, 0, 0, 0, 0, time.UTC),
 			MinCount:  2700,
 			MaxCount:  3000,
-			ExpectedResult: model.DbResponse{
+			ExpectedResult: model.DBResponse{
 				Records: []model.Record(nil),
 			},
 		},

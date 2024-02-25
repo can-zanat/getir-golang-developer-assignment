@@ -32,6 +32,7 @@ func (c *CacheStore) Get(key string) (string, bool) {
 	c.RLock()
 	defer c.RUnlock()
 	val, ok := c.store[key]
+
 	return val, ok
 }
 
@@ -65,6 +66,7 @@ func (h *Handler) GetInfo(w http.ResponseWriter, r *http.Request) {
 			Records: nil,
 		}
 		jsonResponse, err := json.Marshal(response)
+
 		if err != nil {
 			http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 			return
@@ -72,6 +74,7 @@ func (h *Handler) GetInfo(w http.ResponseWriter, r *http.Request) {
 
 		w.WriteHeader(http.StatusMethodNotAllowed)
 		w.Write(jsonResponse)
+
 		return
 	}
 
@@ -83,13 +86,14 @@ func (h *Handler) GetInfo(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := request.Validate(); err != nil {
+	if err = request.Validate(); err != nil {
 		response := model.GetInfoResponse{
 			Code:    http.StatusBadRequest,
 			Msg:     err.Error(),
 			Records: nil,
 		}
 		jsonResponse, err := json.Marshal(response)
+
 		if err != nil {
 			http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 			return
@@ -97,6 +101,7 @@ func (h *Handler) GetInfo(w http.ResponseWriter, r *http.Request) {
 
 		w.WriteHeader(http.StatusBadRequest)
 		w.Write(jsonResponse)
+
 		return
 	}
 
@@ -109,6 +114,7 @@ func (h *Handler) GetInfo(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Write(jsonResponse)
+
 	return
 }
 

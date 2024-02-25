@@ -31,7 +31,7 @@ type InfoData struct {
 	Counts    []int     `json:"counts" bson:"counts"`
 }
 
-type DbResponse struct {
+type DBResponse struct {
 	Records []Record `json:"records"`
 }
 
@@ -41,7 +41,6 @@ func (d *GetInfoRequest) ValidateDate(dateStr string) bool {
 }
 
 func (d *GetInfoRequest) Validate() error {
-
 	if !d.ValidateDate(d.StartDate) {
 		return errors.New("startDate is not in the valid format YYYY-MM-DD")
 	}

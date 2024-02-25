@@ -35,10 +35,10 @@ func (m *MockStore) EXPECT() *MockStoreMockRecorder {
 }
 
 // GetInfo mocks base method.
-func (m *MockStore) GetInfo(request model.GetInfoRequest) (model.DbResponse, error) {
+func (m *MockStore) GetInfo(request model.GetInfoRequest) (model.DBResponse, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GetInfo", request)
-	ret0, _ := ret[0].(model.DbResponse)
+	ret0, _ := ret[0].(model.DBResponse)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }

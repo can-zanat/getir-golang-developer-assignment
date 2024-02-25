@@ -2,16 +2,17 @@ package internal
 
 import (
 	"errors"
-	"github.com/golang/mock/gomock"
-	"github.com/stretchr/testify/assert"
 	"main/model"
 	"net/http"
 	"testing"
 	"time"
+
+	"github.com/golang/mock/gomock"
+	"github.com/stretchr/testify/assert"
 )
 
 var (
-	expectedDbResponse = model.DbResponse{
+	expectedDBResponse = model.DBResponse{
 		Records: []model.Record{
 			{
 				Key:        "TAKwGc6Jr4i8Z487",
@@ -30,19 +31,17 @@ func TestService_GetInfo(t *testing.T) {
 	service := NewService(mockStore)
 
 	t.Run("should return info properly", func(t *testing.T) {
-
-		mockStore.EXPECT().GetInfo(expectedRequest).Return(expectedDbResponse, nil)
+		mockStore.EXPECT().GetInfo(expectedRequest).Return(expectedDBResponse, nil)
 
 		response := service.GetInfo(expectedRequest)
 
 		assert.Equal(t, 0, response.Code)
 		assert.Equal(t, "Success", response.Msg)
-		assert.Equal(t, expectedDbResponse.Records, response.Records)
+		assert.Equal(t, expectedDBResponse.Records, response.Records)
 	})
 
 	t.Run("should return error when error occurs while getting data from db", func(t *testing.T) {
-
-		mockStore.EXPECT().GetInfo(gomock.Any()).Return(model.DbResponse{}, errors.New("database error")).Times(1)
+		mockStore.EXPECT().GetInfo(gomock.Any()).Return(model.DBResponse{}, errors.New("database error")).Times(1)
 
 		response := service.GetInfo(expectedRequest)
 

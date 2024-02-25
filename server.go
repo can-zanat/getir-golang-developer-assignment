@@ -3,13 +3,14 @@ package main
 import (
 	"context"
 	"fmt"
-	zapLogger "go.uber.org/zap"
 	"main/internal"
 	"net/http"
 	"os"
 	"os/signal"
 	"syscall"
 	"time"
+
+	zapLogger "go.uber.org/zap"
 )
 
 //TODO: vakit kalırsa zap logger değiştir. 43 ve 57 de sorun oluyordu vakit kalırsa mutlaka değiştir.
@@ -33,12 +34,14 @@ func (s *Server) Run() {
 	s.handler.RegisterRoutes(mux) // Assuming a method to register routes
 
 	server := &http.Server{
-		Addr:    s.port,
-		Handler: mux,
+		Addr:              s.port,
+		Handler:           mux,
+		ReadHeaderTimeout: 5 * time.Second,
 	}
 
 	go func() {
 		s.logger.Info(fmt.Sprintf("Starting server on %s", s.port))
+
 		if err := server.ListenAndServe(); err != http.ErrServerClosed {
 			s.logger.Fatal("Server failed to start", zapLogger.Error(err))
 		}

@@ -11,7 +11,7 @@ type Service struct {
 }
 
 type Store interface {
-	GetInfo(request model.GetInfoRequest) (model.DbResponse, error)
+	GetInfo(request model.GetInfoRequest) (model.DBResponse, error)
 }
 
 func NewService(s Store) *Service {
@@ -19,7 +19,6 @@ func NewService(s Store) *Service {
 }
 
 func (s *Service) GetInfo(request model.GetInfoRequest) model.GetInfoResponse {
-
 	infoData, err := s.store.GetInfo(request)
 	if err != nil {
 		return model.GetInfoResponse{
@@ -39,7 +38,7 @@ func (s *Service) GetInfo(request model.GetInfoRequest) model.GetInfoResponse {
 	}
 }
 
-func convertToGetInfoResponse(data model.DbResponse) model.GetInfoResponse {
+func convertToGetInfoResponse(data model.DBResponse) model.GetInfoResponse {
 	var records []model.Record
 	for _, info := range data.Records {
 		records = append(records, model.Record{

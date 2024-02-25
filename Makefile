@@ -4,6 +4,9 @@ build:
 run:
 	go run .
 
+lint:
+	golangci-lint run -c .local/.golangci.yml
+
 unit-test:
 	go test ./... -short
 
