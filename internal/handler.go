@@ -9,7 +9,7 @@ import (
 
 // CacheStore is a simple in-memory store with a mutex to handle concurrent access.
 type CacheStore struct {
-	sync.RWMutex
+	mu    sync.RWMutex
 	store map[string]string
 }
 
@@ -22,29 +22,32 @@ func NewCacheStore() *CacheStore {
 
 // Set adds a key-value pair to the store.
 func (c *CacheStore) Set(key, value string) {
-	c.Lock()
-	defer c.Unlock()
+	c.mu.Lock()
+	defer c.mu.Unlock()
 	c.store[key] = value
 }
 
 // Get retrieves the value for a key from the store.
 func (c *CacheStore) Get(key string) (string, bool) {
-	c.RLock()
-	defer c.RUnlock()
+	c.mu.RLock()
+	defer c.mu.RUnlock()
 	val, ok := c.store[key]
 
 	return val, ok
 }
 
+// Handler handles HTTP requests.
 type Handler struct {
 	service Actions
 	cache   *CacheStore
 }
 
+// Actions defines methods that handle business logic.
 type Actions interface {
 	GetInfo(request model.GetInfoRequest) model.GetInfoResponse
 }
 
+// NewHandler creates a new Handler instance.
 func NewHandler(service Actions) *Handler {
 	return &Handler{
 		service: service,
@@ -52,6 +55,7 @@ func NewHandler(service Actions) *Handler {
 	}
 }
 
+// RegisterRoutes registers HTTP routes.
 func (h *Handler) RegisterRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("/info", h.GetInfo)
 	mux.HandleFunc("/set", h.SetCache())
@@ -73,7 +77,12 @@ func (h *Handler) GetInfo(w http.ResponseWriter, r *http.Request) {
 		}
 
 		w.WriteHeader(http.StatusMethodNotAllowed)
-		w.Write(jsonResponse)
+		_, err = w.Write(jsonResponse)
+
+		if err != nil {
+			http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+			return
+		}
 
 		return
 	}
@@ -92,15 +101,20 @@ func (h *Handler) GetInfo(w http.ResponseWriter, r *http.Request) {
 			Msg:     err.Error(),
 			Records: nil,
 		}
-		jsonResponse, err := json.Marshal(response)
+		jsonResponse, errMarshal := json.Marshal(response)
 
-		if err != nil {
+		if errMarshal != nil {
 			http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 			return
 		}
 
 		w.WriteHeader(http.StatusBadRequest)
-		w.Write(jsonResponse)
+		_, err = w.Write(jsonResponse)
+
+		if err != nil {
+			http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+			return
+		}
 
 		return
 	}
@@ -113,20 +127,33 @@ func (h *Handler) GetInfo(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	w.Write(jsonResponse)
-
-	return
+	_, err = w.Write(jsonResponse)
+	if err != nil {
+		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+		return
+	}
 }
 
 func (h *Handler) SetCache() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != "POST" {
+			w.WriteHeader(http.StatusMethodNotAllowed)
+			return
+		}
+
 		var data struct {
 			Key   string `json:"key"`
 			Value string `json:"value"`
 		}
 
 		if err := json.NewDecoder(r.Body).Decode(&data); err != nil {
+			if data.Key == "" || data.Value == "" {
+				http.Error(w, "request body cannot be empty", http.StatusBadRequest)
+				return
+			}
+
 			http.Error(w, err.Error(), http.StatusBadRequest)
+
 			return
 		}
 
@@ -138,20 +165,40 @@ func (h *Handler) SetCache() http.HandlerFunc {
 			return
 		}
 
-		w.Write(response)
+		_, err = w.Write(response)
+		if err != nil {
+			http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+			return
+		}
 	}
 }
 
 func (h *Handler) GetCache() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != "GET" {
+			w.WriteHeader(http.StatusMethodNotAllowed)
+			return
+		}
+
 		key := r.URL.Query().Get("key")
+		if key == "" {
+			http.Error(w, "query param cannot be empty", http.StatusBadRequest)
+			return
+		}
+
 		if value, ok := h.cache.Get(key); ok {
 			response, err := json.Marshal(map[string]string{"key": key, "value": value})
 			if err != nil {
 				http.Error(w, err.Error(), http.StatusInternalServerError)
 				return
 			}
-			w.Write(response)
+
+			_, err = w.Write(response)
+
+			if err != nil {
+				http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+				return
+			}
 		} else {
 			http.Error(w, "Key not found", http.StatusNotFound)
 		}

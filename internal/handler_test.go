@@ -14,7 +14,9 @@ import (
 )
 
 var (
-	getInfoURL = "/info"
+	getInfoURL  = "/info"
+	getCacheURL = "/get?key=active-tabs"
+	setCacheURL = "/set"
 
 	mockSuccessResponse = model.GetInfoResponse{
 		Code: 0,
@@ -47,6 +49,11 @@ var (
 		MaxCount:  3000,
 	}
 )
+
+type SetCacheRequest struct {
+	Key   string `json:"key"`
+	Value string `json:"value"`
+}
 
 func TestHandler_GetInfo(t *testing.T) {
 	mockService, mockServiceController := createMockService(t)
@@ -88,7 +95,7 @@ func TestHandler_GetInfo(t *testing.T) {
 		assert.Nil(t, err)
 		assert.Equal(t, mockSuccessResponse, response)
 	})
-	t.Run("should return method not allowed error when request type is not Get", func(t *testing.T) {
+	t.Run("should return method not allowed error when request type is not Post", func(t *testing.T) {
 		expectedRequestJSON, _ := json.Marshal(expectedRequest)
 		reqBody := bytes.NewBuffer(expectedRequestJSON)
 
@@ -136,6 +143,121 @@ func TestHandler_GetInfo(t *testing.T) {
 		err = json.NewDecoder(res.Body).Decode(&response)
 		assert.Nil(t, err)
 		assert.Equal(t, mockStatusBadRequestResponse, response)
+	})
+}
+
+func TestHandler_SetCache(t *testing.T) {
+	mockService, mockServiceController := createMockService(t)
+	defer mockServiceController.Finish()
+
+	handler := NewHandler(mockService)
+
+	mux := http.NewServeMux()
+	handler.RegisterRoutes(mux)
+
+	server := httptest.NewServer(mux)
+	defer server.Close()
+
+	t.Run("should return cache properly", func(t *testing.T) {
+		expectedRequestJSON, _ := json.Marshal(SetCacheRequest{
+			Key:   "active-tabs",
+			Value: "getir",
+		})
+		reqBody := bytes.NewBuffer(expectedRequestJSON)
+
+		req, err := http.NewRequest(http.MethodPost, server.URL+setCacheURL, reqBody)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		client := &http.Client{}
+		res, err := client.Do(req)
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer res.Body.Close()
+
+		assert.Equal(t, http.StatusOK, res.StatusCode)
+	})
+	t.Run("should return bad request when request body is empty", func(t *testing.T) {
+		req, err := http.NewRequest(http.MethodPost, server.URL+setCacheURL, http.NoBody)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		client := &http.Client{}
+		res, err := client.Do(req)
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer res.Body.Close()
+
+		assert.Equal(t, http.StatusBadRequest, res.StatusCode)
+	})
+	t.Run("should return method not allowed error when request type is not Post", func(t *testing.T) {
+		expectedRequestJSON, _ := json.Marshal(SetCacheRequest{
+			Key:   "active-tabs",
+			Value: "getir",
+		})
+		reqBody := bytes.NewBuffer(expectedRequestJSON)
+
+		req, err := http.NewRequest(http.MethodGet, server.URL+setCacheURL, reqBody)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		client := &http.Client{}
+		res, err := client.Do(req)
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer res.Body.Close()
+
+		assert.Equal(t, http.StatusMethodNotAllowed, res.StatusCode)
+	})
+}
+
+func TestHandler_GetCache(t *testing.T) {
+	mockService, mockServiceController := createMockService(t)
+	defer mockServiceController.Finish()
+
+	handler := NewHandler(mockService)
+
+	mux := http.NewServeMux()
+	handler.RegisterRoutes(mux)
+
+	server := httptest.NewServer(mux)
+	defer server.Close()
+
+	t.Run("should return bad request when query params is empty", func(t *testing.T) {
+		req, err := http.NewRequest(http.MethodGet, server.URL+"/get", http.NoBody)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		client := &http.Client{}
+		res, err := client.Do(req)
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer res.Body.Close()
+
+		assert.Equal(t, http.StatusBadRequest, res.StatusCode)
+	})
+	t.Run("should return method not allowed error when request type is not Get", func(t *testing.T) {
+		req, err := http.NewRequest(http.MethodPost, server.URL+getCacheURL, http.NoBody)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		client := &http.Client{}
+		res, err := client.Do(req)
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer res.Body.Close()
+
+		assert.Equal(t, http.StatusMethodNotAllowed, res.StatusCode)
 	})
 }
 
