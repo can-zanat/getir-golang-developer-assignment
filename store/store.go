@@ -14,20 +14,22 @@ import (
 	"go.mongodb.org/mongo-driver/mongo/readpref"
 )
 
+// Store defines methods for interacting with the data store.
 type Store interface {
 	GetInfo(request model.GetInfoRequest) (model.DBResponse, error)
 }
 
+// Mongo implements the Store interface for MongoDB.
 type Mongo struct {
 	DB     *mongo.Database
 	Client *mongo.Client
 }
 
-var (
-	timeoutTimeBox = time.Duration(10)
-)
+// timeoutTimeBox sets the timeout duration for MongoDB operations.
+const timeoutTimeBox = time.Duration(10)
 
-func NewStore(c config.Mongo) *Mongo {
+// NewStore initializes a new MongoDB connection and returns a Store instance.
+func NewStore(c config.Mongo) (*Mongo, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), timeoutTimeBox*time.Second)
 	defer cancel()
 
@@ -35,18 +37,21 @@ func NewStore(c config.Mongo) *Mongo {
 	client, err := mongo.Connect(ctx, clientOptions)
 
 	if err != nil {
-		log.Fatal(err)
+		log.Printf("error occurs while connecting mongo db: %v", err)
+		return nil, err
 	}
 
-	if err := client.Ping(ctx, readpref.Primary()); err != nil {
-		log.Fatal(err)
+	if err = client.Ping(ctx, readpref.Primary()); err != nil {
+		log.Printf("error occurs while connecting mongo db: %v", err)
+		return nil, err
 	}
 
 	db := client.Database(c.Database)
 
-	return &Mongo{DB: db, Client: client}
+	return &Mongo{DB: db, Client: client}, nil
 }
 
+// GetInfo retrieves information from the MongoDB store based on the provided request.
 func (m *Mongo) GetInfo(request model.GetInfoRequest) (model.DBResponse, error) {
 	var results []bson.M
 
@@ -57,23 +62,28 @@ func (m *Mongo) GetInfo(request model.GetInfoRequest) (model.DBResponse, error) 
 
 	collection := m.DB.Collection("records")
 
+	layout := "2006-01-02"
+	startDate, _ := time.Parse(layout, request.StartDate)
+	endDate, _ := time.Parse(layout, request.EndDate)
+
 	pipeline := mongo.Pipeline{
-		{{"$match", bson.D{
-			{"createdAt", bson.D{
-				{"$gte", request.StartDate},
-				{"$lte", request.EndDate},
+		{{Key: "$match", Value: bson.D{
+			{Key: "createdAt", Value: bson.D{
+				{Key: "$gte", Value: primitive.NewDateTimeFromTime(startDate)},
+				{Key: "$lte", Value: primitive.NewDateTimeFromTime(endDate)},
 			}},
 		}}},
-		{{"$unwind", "$counts"}},
-		{{"$group", bson.D{
-			{"_id", "$key"},
-			{"totalCount", bson.D{{"$sum", "$counts"}}},
-			{"createdAt", bson.D{{"$first", "$createdAt"}}},
+		{{Key: "$unwind", Value: "$counts"}},
+		{{Key: "$group", Value: bson.D{
+			{Key: "_id", Value: "$key"},
+			{Key: "totalCount", Value: bson.D{{Key: "$sum", Value: "$counts"}}},
+			{Key: "counts", Value: bson.D{{Key: "$push", Value: "$counts"}}},
+			{Key: "createdAt", Value: bson.D{{Key: "$first", Value: "$createdAt"}}},
 		}}},
-		{{"$match", bson.D{
-			{"totalCount", bson.D{
-				{"$gte", request.MinCount},
-				{"$lte", request.MaxCount},
+		{{Key: "$match", Value: bson.D{
+			{Key: "totalCount", Value: bson.D{
+				{Key: "$gte", Value: request.MinCount},
+				{Key: "$lte", Value: request.MaxCount},
 			}},
 		}}},
 	}
@@ -90,15 +100,15 @@ func (m *Mongo) GetInfo(request model.GetInfoRequest) (model.DBResponse, error) 
 	for _, result := range results {
 		var record model.Record
 
-		if key, ok := result["key"].(string); ok {
+		if key, ok := result["_id"].(string); ok {
 			record.Key = key
 		}
 
 		if createdAt, ok := result["createdAt"].(primitive.DateTime); ok {
-			record.CreatedAt = createdAt.Time()
+			record.CreatedAt = createdAt.Time().UTC()
 		}
 
-		if totalCount, ok := result["totalCount"].(int32); ok {
+		if totalCount, ok := result["totalCount"].(int64); ok { // veya int32, tipinize bağlı olarak
 			record.TotalCount = int(totalCount)
 		}
 

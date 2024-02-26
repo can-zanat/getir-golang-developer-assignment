@@ -41,7 +41,7 @@ func TestService_GetInfo(t *testing.T) {
 	})
 
 	t.Run("should return error when error occurs while getting data from db", func(t *testing.T) {
-		mockStore.EXPECT().GetInfo(gomock.Any()).Return(model.DBResponse{}, errors.New("database error")).Times(1)
+		mockStore.EXPECT().GetInfo(gomock.Any()).Return(model.DBResponse{}, errors.New("database error"))
 
 		response := service.GetInfo(expectedRequest)
 
